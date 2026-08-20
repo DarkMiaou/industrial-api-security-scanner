@@ -1,6 +1,23 @@
 # ⒸAngelaMos | 2026
 
 services:
+  # Local-only simulated OT target. Intentionally not published on the host.
+  ot-gateway-demo:
+    image: iass-ot-gateway-demo:local
+    build:
+      context: .
+      dockerfile: ot-gateway-demo/Dockerfile
+    container_name: iass_ot_gateway_prod
+    environment:
+      OT_PROFILE: ${OT_PROFILE:-hardened}
+      OT_JWT_SECRET: ${OT_JWT_SECRET}
+      OT_DEMO_RESET_KEY: ${OT_DEMO_RESET_KEY}
+    expose:
+      - "8081"
+    networks:
+      - apisec_network
+    restart: always
+
   # PostgreSQL Database
   db:
     image: postgres:16-alpine
@@ -41,6 +58,8 @@ services:
       - "8000"
     depends_on:
       db:
+        condition: service_healthy
+      ot-gateway-demo:
         condition: service_healthy
     networks:
       - apisec_network
