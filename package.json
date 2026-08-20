@@ -1,0 +1,33 @@
+{
+  "name": "api-security-scanner",
+  "version": "1.0.1",
+  "description": "Automated API security testing tool with FastAPI backend and ReactTS frontend",
+  "private": true,
+  "scripts": {
+    "dev": "docker compose -f dev.compose.yml up",
+    "dev:build": "docker compose -f dev.compose.yml up --build",
+    "dev:down": "docker compose -f dev.compose.yml down",
+    "dev:logs": "docker compose -f dev.compose.yml logs -f",
+    "prod": "docker compose -f compose.yml up -d",
+    "prod:build": "docker compose -f compose.yml up --build -d",
+    "prod:down": "docker compose -f compose.yml down",
+    "prod:logs": "docker compose -f compose.yml logs -f",
+    "clean": "docker compose -f dev.compose.yml down -v && docker compose -f compose.yml down -v",
+    "clean:all": "npm run clean && docker system prune -af --volumes"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CarterPerez-dev/Cybersecurity-Projects/PROJECTS/intermediate/api-security-scanner"
+  },
+  "keywords": [
+    "security",
+    "api-testing",
+    "vulnerability-scanner",
+    "pentesting",
+    "fastapi",
+    "react",
+    "docker"
+  ],
+  "author": "https://github.com/CarterPerez-dev",
+  "license": "AGPL-3.0-only"
+}
