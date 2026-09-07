@@ -22,10 +22,8 @@ interface RegisterFormState {
 }
 
 interface ScanFormState {
-  targetUrl: string
-  authToken: string
   selectedTests: ScanTestType[]
-  maxRequests: string
+  authorizationConfirmed: boolean
   expiresAt: number | null
 }
 
@@ -51,7 +49,7 @@ interface UIActions {
   ) => void
   setScanFormField: (
     field: keyof Omit<ScanFormState, 'expiresAt'>,
-    value: string | ScanTestType[]
+    value: boolean | ScanTestType[]
   ) => void
   toggleTestExpanded: (testId: number) => void
   clearLoginForm: () => void
@@ -79,13 +77,11 @@ const initialRegisterForm: RegisterFormState = {
   expiresAt: null,
 }
 
-const initialScanForm: ScanFormState = {
-  targetUrl: '',
-  authToken: '',
+const createInitialScanForm = (): ScanFormState => ({
   selectedTests: [],
-  maxRequests: '50',
+  authorizationConfirmed: false,
   expiresAt: null,
-}
+})
 
 const initialTestResults: TestResultsState = {
   expandedTests: {},
@@ -96,7 +92,7 @@ export const useUIStore = create<UIStore>()(
     immer((set) => ({
       loginForm: initialLoginForm,
       registerForm: initialRegisterForm,
-      scanForm: initialScanForm,
+      scanForm: createInitialScanForm(),
       testResults: initialTestResults,
 
       setLoginFormField: (field, value): void => {
@@ -141,7 +137,7 @@ export const useUIStore = create<UIStore>()(
 
       clearScanForm: (): void => {
         set((state) => {
-          state.scanForm = initialScanForm
+          state.scanForm = createInitialScanForm()
         })
       },
 
@@ -167,7 +163,7 @@ export const useUIStore = create<UIStore>()(
             state.scanForm.expiresAt !== null &&
             state.scanForm.expiresAt < now
           ) {
-            state.scanForm = initialScanForm
+            state.scanForm = createInitialScanForm()
           }
         })
       },

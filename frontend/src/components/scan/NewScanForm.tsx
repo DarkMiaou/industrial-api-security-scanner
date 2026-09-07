@@ -5,10 +5,11 @@
 
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/common/Button'
-import { Input } from '@/components/common/Input'
 import { LoadingOverlay } from '@/components/common/LoadingOverlay'
 import {
-  SCAN_TEST_TYPES,
+  OT_GATEWAY_TARGET,
+  SCAN_TEST_GROUPS,
+  SCAN_TEST_ORDER,
   type ScanTestType,
   TEST_TYPE_LABELS,
 } from '@/config/constants'
@@ -23,53 +24,35 @@ export const NewScanForm = (): React.ReactElement => {
   const clearScanForm = useUIStore((state) => state.clearScanForm)
   const clearExpiredData = useUIStore((state) => state.clearExpiredData)
 
-  const [targetUrl, setTargetUrl] = useState<string>('')
-  const [authToken, setAuthToken] = useState<string>('')
-  const [selectedTests, setSelectedTests] = useState<ScanTestType[]>([])
-  const [maxRequests, setMaxRequests] = useState<string>('50')
+  const selectedTests = scanFormState.selectedTests
+  const authorizationConfirmed = scanFormState.authorizationConfirmed
   const [errors, setErrors] = useState<{
-    targetUrl?: string
-    authToken?: string
     testsToRun?: string
-    maxRequests?: string
+    authorizationConfirmed?: string
   }>({})
 
   const { mutate: createScan, isPending } = useCreateScan()
 
   useEffect(() => {
     clearExpiredData()
-    setTargetUrl(scanFormState.targetUrl)
-    setAuthToken(scanFormState.authToken)
-    setSelectedTests(
-      scanFormState.selectedTests.length > 0
-        ? scanFormState.selectedTests
-        : [SCAN_TEST_TYPES.RATE_LIMIT]
-    )
-    setMaxRequests(scanFormState.maxRequests)
-  }, [
-    clearExpiredData,
-    scanFormState.targetUrl,
-    scanFormState.authToken,
-    scanFormState.selectedTests,
-    scanFormState.maxRequests,
-  ])
+    const currentForm = useUIStore.getState().scanForm
+
+    if (currentForm.expiresAt === null) {
+      setScanFormField('selectedTests', [...SCAN_TEST_ORDER])
+    }
+  }, [clearExpiredData, setScanFormField])
 
   const validateForm = (): boolean => {
-    const maxReq = parseInt(maxRequests, 10)
-
     const result = scanSchema.safeParse({
-      targetUrl: targetUrl.trim(),
-      authToken: authToken.trim().length > 0 ? authToken.trim() : undefined,
+      target: OT_GATEWAY_TARGET.KEY,
       testsToRun: selectedTests,
-      maxRequests: maxReq,
+      authorizationConfirmed,
     })
 
     if (!result.success) {
       const newErrors: {
-        targetUrl?: string
-        authToken?: string
         testsToRun?: string
-        maxRequests?: string
+        authorizationConfirmed?: string
       } = {}
 
       result.error.issues.forEach((err) => {
@@ -87,28 +70,35 @@ export const NewScanForm = (): React.ReactElement => {
     return true
   }
 
-  const handleTargetUrlChange = (value: string): void => {
-    setTargetUrl(value)
-    setScanFormField('targetUrl', value)
-  }
-
-  const handleAuthTokenChange = (value: string): void => {
-    setAuthToken(value)
-    setScanFormField('authToken', value)
-  }
-
-  const handleMaxRequestsChange = (value: string): void => {
-    setMaxRequests(value)
-    setScanFormField('maxRequests', value)
-  }
-
   const handleTestToggle = (test: ScanTestType): void => {
     const newTests = selectedTests.includes(test)
       ? selectedTests.filter((t) => t !== test)
       : [...selectedTests, test]
 
-    setSelectedTests(newTests)
     setScanFormField('selectedTests', newTests)
+    setErrors({})
+  }
+
+  const handleGroupToggle = (tests: readonly ScanTestType[]): void => {
+    const groupSelected = tests.every((test) => selectedTests.includes(test))
+    const newTests = groupSelected
+      ? selectedTests.filter((test) => !tests.includes(test))
+      : Array.from(new Set([...selectedTests, ...tests]))
+
+    setScanFormField('selectedTests', newTests)
+    setErrors({})
+  }
+
+  const handleSelectAll = (): void => {
+    const allSelected = selectedTests.length === SCAN_TEST_ORDER.length
+    const newTests = allSelected ? [] : [...SCAN_TEST_ORDER]
+    setScanFormField('selectedTests', newTests)
+    setErrors({})
+  }
+
+  const handleAuthorizationChange = (confirmed: boolean): void => {
+    setScanFormField('authorizationConfirmed', confirmed)
+    setErrors({})
   }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
@@ -118,14 +108,11 @@ export const NewScanForm = (): React.ReactElement => {
       return
     }
 
-    const maxReq = parseInt(maxRequests, 10)
-
     createScan(
       {
-        target_url: targetUrl.trim(),
-        auth_token: authToken.trim().length > 0 ? authToken.trim() : null,
+        target: OT_GATEWAY_TARGET.KEY,
         tests_to_run: selectedTests,
-        max_requests: maxReq,
+        authorization_confirmed: true,
       },
       {
         onSuccess: () => {
@@ -139,66 +126,132 @@ export const NewScanForm = (): React.ReactElement => {
     <>
       {isPending ? <LoadingOverlay tests={selectedTests} /> : null}
       <form className="scan-form" onSubmit={handleSubmit}>
-        <div className="scan-form__fields">
-          <Input
-            label="Target URL"
-            type="url"
-            value={targetUrl}
-            onChange={(e) => handleTargetUrlChange(e.target.value)}
-            error={errors.targetUrl}
-            placeholder="https://api.example.com/endpoint"
-            required
-          />
-
-          <Input
-            label="Auth Token (Optional)"
-            type="text"
-            value={authToken}
-            onChange={(e) => handleAuthTokenChange(e.target.value)}
-            error={errors.authToken}
-            placeholder="Bearer token or API key"
-          />
-
-          <div className="scan-form__field">
-            <span className="scan-form__label">
-              Select Tests
-              {errors.testsToRun !== null && errors.testsToRun !== undefined ? (
-                <span className="scan-form__error" role="alert">
-                  {errors.testsToRun}
-                </span>
-              ) : null}
-            </span>
-            <div className="scan-form__checkboxes">
-              {Object.values(SCAN_TEST_TYPES).map((test) => (
-                <label key={test} className="scan-form__checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={selectedTests.includes(test)}
-                    onChange={() => handleTestToggle(test)}
-                    className="scan-form__checkbox"
-                  />
-                  <span>{TEST_TYPE_LABELS[test]}</span>
-                </label>
-              ))}
-            </div>
+        <section className="scan-form__target" aria-label="Fixed OT scan target">
+          <div className="scan-form__target-icon" aria-hidden="true">
+            WP
           </div>
+          <div className="scan-form__target-copy">
+            <span className="scan-form__eyebrow">Authorized local target</span>
+            <strong>{OT_GATEWAY_TARGET.DISPLAY_NAME}</strong>
+            <span>{OT_GATEWAY_TARGET.KEY}</span>
+          </div>
+          <div className="scan-form__target-facts">
+            <span>
+              <b>Scope</b> Local Docker network
+            </span>
+            <span>
+              <b>Profile</b> Detected at runtime
+            </span>
+          </div>
+          <span className="scan-form__locked">Locked target</span>
+        </section>
 
-          <Input
-            label="Max Requests"
-            type="number"
-            value={maxRequests}
-            onChange={(e) => handleMaxRequestsChange(e.target.value)}
-            error={errors.maxRequests}
-            placeholder="50"
-            min="1"
-            max="50"
-            required
-          />
+        <div className="scan-form__controls-heading">
+          <div>
+            <span className="scan-form__eyebrow">Control plan</span>
+            <h3>Choose the checks to execute</h3>
+          </div>
+          <button
+            type="button"
+            className="scan-form__select-all"
+            onClick={handleSelectAll}
+          >
+            {selectedTests.length === SCAN_TEST_ORDER.length
+              ? 'Clear selection'
+              : 'Select all 7'}
+          </button>
         </div>
 
-        <Button type="submit" isLoading={isPending} disabled={isPending}>
-          {isPending ? 'Running Scan...' : 'Start Scan'}
-        </Button>
+        {errors.testsToRun !== null && errors.testsToRun !== undefined ? (
+          <span className="scan-form__error" role="alert">
+            {errors.testsToRun}
+          </span>
+        ) : null}
+
+        <div className="scan-form__groups">
+          {SCAN_TEST_GROUPS.map((group) => {
+            const selectedCount = group.tests.filter((test) =>
+              selectedTests.includes(test)
+            ).length
+            const groupSelected = selectedCount === group.tests.length
+
+            return (
+              <fieldset key={group.id} className="scan-form__group">
+                <legend className="scan-form__group-heading">
+                  <span>
+                    <strong>{group.title}</strong>
+                    <small>{group.description}</small>
+                  </span>
+                  <button
+                    type="button"
+                    className="scan-form__group-toggle"
+                    onClick={() => handleGroupToggle(group.tests)}
+                  >
+                    {groupSelected ? 'Deselect group' : 'Select group'}
+                  </button>
+                </legend>
+                <div className="scan-form__checkboxes">
+                  {group.tests.map((test) => (
+                    <label
+                      key={test}
+                      className={`scan-form__checkbox-label ${
+                        selectedTests.includes(test)
+                          ? 'scan-form__checkbox-label--selected'
+                          : ''
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedTests.includes(test)}
+                        onChange={() => handleTestToggle(test)}
+                        className="scan-form__checkbox"
+                      />
+                      <span>{TEST_TYPE_LABELS[test]}</span>
+                    </label>
+                  ))}
+                </div>
+                <span className="scan-form__group-count">
+                  {selectedCount.toString()} of {group.tests.length.toString()}{' '}
+                  selected
+                </span>
+              </fieldset>
+            )
+          })}
+        </div>
+
+        <div className="scan-form__footer">
+          <div className="scan-form__authorization-wrap">
+            <label className="scan-form__authorization">
+              <input
+                type="checkbox"
+                checked={authorizationConfirmed}
+                onChange={(event) =>
+                  handleAuthorizationChange(event.target.checked)
+                }
+                className="scan-form__checkbox"
+              />
+              <span>
+                <strong>I am authorized to run this assessment.</strong>
+                <small>
+                  The scan is limited to the local OT laboratory and never targets
+                  an arbitrary address.
+                </small>
+              </span>
+            </label>
+            {errors.authorizationConfirmed !== undefined ? (
+              <span className="scan-form__error" role="alert">
+                {errors.authorizationConfirmed}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="scan-form__submit">
+            <span>{selectedTests.length.toString()} controls selected</span>
+            <Button type="submit" isLoading={isPending} disabled={isPending}>
+              {isPending ? 'Running assessment...' : 'Run OT assessment'}
+            </Button>
+          </div>
+        </div>
       </form>
     </>
   )

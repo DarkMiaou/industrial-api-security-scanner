@@ -123,8 +123,16 @@ export const LoginForm = (): React.ReactElement => {
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
       <div className="auth-form__header">
-        <h1 className="auth-form__title">Welcome Back</h1>
-        <p className="auth-form__subtitle">Sign in to your account</p>
+        <span className="auth-form__mark" aria-hidden="true">
+          OT
+        </span>
+        <span className="auth-form__eyebrow">
+          Industrial assessment workspace
+        </span>
+        <h1 className="auth-form__title">Welcome back</h1>
+        <p className="auth-form__subtitle">
+          Sign in to manage your controlled OT assessments.
+        </p>
       </div>
 
       <div className="auth-form__fields">
@@ -161,13 +169,13 @@ export const LoginForm = (): React.ReactElement => {
       ) : null}
 
       <Button type="submit" isLoading={isPending} disabled={isPending}>
-        Sign In
+        Sign in
       </Button>
 
       <p className="auth-form__link">
         Don&apos;t have an account?{' '}
         <Link to="/register" className="auth-form__link-text">
-          Sign up
+          Create one
         </Link>
       </p>
     </form>

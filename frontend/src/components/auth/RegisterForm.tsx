@@ -155,9 +155,15 @@ export const RegisterForm = (): React.ReactElement => {
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
       <div className="auth-form__header">
-        <h1 className="auth-form__title">Create Account</h1>
+        <span className="auth-form__mark" aria-hidden="true">
+          OT
+        </span>
+        <span className="auth-form__eyebrow">
+          Industrial assessment workspace
+        </span>
+        <h1 className="auth-form__title">Create your workspace</h1>
         <p className="auth-form__subtitle">
-          Get started with API Security Scanner
+          Set up access to the local IASS-OT demonstration environment.
         </p>
       </div>
 
@@ -207,7 +213,7 @@ export const RegisterForm = (): React.ReactElement => {
       ) : null}
 
       <Button type="submit" isLoading={isPending} disabled={isPending}>
-        Create Account
+        Create account
       </Button>
 
       <p className="auth-form__link">

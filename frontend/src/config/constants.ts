@@ -57,8 +57,43 @@ export const STORAGE_KEYS = {
 /**
  * Application Constants
  */
-export const APP_NAME = 'API Security Scanner'
-export const APP_VERSION = '1.0.0'
+export const APP_NAME = 'IASS-OT'
+export const APP_VERSION = '1.0.1'
+
+export const OT_GATEWAY_TARGET = {
+  KEY: 'ot-gateway-demo',
+  DISPLAY_NAME: 'Water Pump Gateway',
+} as const
+
+export const GATEWAY_PROFILES = {
+  VULNERABLE: 'vulnerable',
+  HARDENED: 'hardened',
+} as const
+
+export type GatewayProfile =
+  (typeof GATEWAY_PROFILES)[keyof typeof GATEWAY_PROFILES]
+
+export const SCAN_EXECUTION_STATUS = {
+  RUNNING: 'running',
+  COMPLETED: 'completed',
+  PARTIAL: 'partial',
+  FAILED: 'failed',
+} as const
+
+export type ScanExecutionStatus =
+  (typeof SCAN_EXECUTION_STATUS)[keyof typeof SCAN_EXECUTION_STATUS]
+
+export const SCAN_EXECUTION_STATUS_LABELS: Record<ScanExecutionStatus, string> = {
+  [SCAN_EXECUTION_STATUS.RUNNING]: 'Running',
+  [SCAN_EXECUTION_STATUS.COMPLETED]: 'Completed',
+  [SCAN_EXECUTION_STATUS.PARTIAL]: 'Partial',
+  [SCAN_EXECUTION_STATUS.FAILED]: 'Failed',
+}
+
+export const GATEWAY_PROFILE_LABELS: Record<GatewayProfile, string> = {
+  [GATEWAY_PROFILES.VULNERABLE]: 'Vulnerable profile',
+  [GATEWAY_PROFILES.HARDENED]: 'Hardened profile',
+}
 
 /**
  * Scan Test Types
@@ -68,6 +103,9 @@ export const SCAN_TEST_TYPES = {
   AUTH: 'auth',
   SQLI: 'sqli',
   IDOR: 'idor',
+  OT_COMMAND_AUTHZ: 'ot_command_authz',
+  OT_AUDIT: 'ot_audit',
+  OT_RATE_LIMIT: 'ot_rate_limit',
 } as const
 
 export type ScanTestType = (typeof SCAN_TEST_TYPES)[keyof typeof SCAN_TEST_TYPES]
@@ -77,7 +115,50 @@ export const TEST_TYPE_LABELS: Record<ScanTestType, string> = {
   [SCAN_TEST_TYPES.AUTH]: 'Authentication',
   [SCAN_TEST_TYPES.SQLI]: 'SQL Injection',
   [SCAN_TEST_TYPES.IDOR]: 'IDOR/BOLA',
+  [SCAN_TEST_TYPES.OT_COMMAND_AUTHZ]: 'OT Command Authorization',
+  [SCAN_TEST_TYPES.OT_AUDIT]: 'OT Audit Trail',
+  [SCAN_TEST_TYPES.OT_RATE_LIMIT]: 'OT Command Rate Limiting',
 }
+
+export const SCAN_TEST_ORDER: readonly ScanTestType[] = [
+  SCAN_TEST_TYPES.AUTH,
+  SCAN_TEST_TYPES.IDOR,
+  SCAN_TEST_TYPES.SQLI,
+  SCAN_TEST_TYPES.RATE_LIMIT,
+  SCAN_TEST_TYPES.OT_COMMAND_AUTHZ,
+  SCAN_TEST_TYPES.OT_AUDIT,
+  SCAN_TEST_TYPES.OT_RATE_LIMIT,
+]
+
+export const SCAN_TEST_GROUPS: ReadonlyArray<{
+  id: string
+  title: string
+  description: string
+  tests: readonly ScanTestType[]
+}> = [
+  {
+    id: 'api-boundary',
+    title: 'API boundary controls',
+    description:
+      'Identity, object access, input validation and login throttling.',
+    tests: [
+      SCAN_TEST_TYPES.AUTH,
+      SCAN_TEST_TYPES.IDOR,
+      SCAN_TEST_TYPES.SQLI,
+      SCAN_TEST_TYPES.RATE_LIMIT,
+    ],
+  },
+  {
+    id: 'ot-safeguards',
+    title: 'OT operational safeguards',
+    description: 'Command authorization, traceability and command throttling.',
+    tests: [
+      SCAN_TEST_TYPES.OT_COMMAND_AUTHZ,
+      SCAN_TEST_TYPES.OT_AUDIT,
+      SCAN_TEST_TYPES.OT_RATE_LIMIT,
+    ],
+  },
+]
 
 /**
  * Test Result Status

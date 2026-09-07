@@ -38,3 +38,10 @@ export const formatRelativeTime = (dateString: string): string => {
 
   return formatDate(dateString)
 }
+
+export const formatDuration = (durationMs: number | null): string => {
+  if (durationMs === null) return '—'
+  if (durationMs < 1000) return `${durationMs.toString()} ms`
+
+  return `${(durationMs / 1000).toFixed(1)} s`
+}

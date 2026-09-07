@@ -3,13 +3,21 @@
 // ©AngelaMos | 2025
 // ===========================
 
-import { SCAN_STATUS, SCAN_TEST_TYPES, SEVERITY } from '@/config/constants'
+import {
+  GATEWAY_PROFILES,
+  SCAN_EXECUTION_STATUS,
+  SCAN_STATUS,
+  SCAN_TEST_TYPES,
+  SEVERITY,
+} from '@/config/constants'
 import type { LoginResponse, RegisterResponse } from './auth.types'
 import type {
   CreateScanResponse,
+  GatewayProfile,
   GetScanResponse,
   GetScansResponse,
   Scan,
+  ScanExecutionStatus,
   ScanStatus,
   ScanTestType,
   Severity,
@@ -67,6 +75,22 @@ const isValidSeverity = (value: unknown): value is Severity => {
   )
 }
 
+const isValidGatewayProfile = (value: unknown): value is GatewayProfile => {
+  return (
+    typeof value === 'string' &&
+    Object.values(GATEWAY_PROFILES).includes(value as GatewayProfile)
+  )
+}
+
+const isValidScanExecutionStatus = (
+  value: unknown
+): value is ScanExecutionStatus => {
+  return (
+    typeof value === 'string' &&
+    Object.values(SCAN_EXECUTION_STATUS).includes(value as ScanExecutionStatus)
+  )
+}
+
 const isValidTestResult = (data: unknown): data is TestResult => {
   if (data === null || data === undefined) return false
   if (typeof data !== 'object') return false
@@ -79,7 +103,11 @@ const isValidTestResult = (data: unknown): data is TestResult => {
     isValidScanTestType(obj.test_name) &&
     isValidScanStatus(obj.status) &&
     isValidSeverity(obj.severity) &&
+    typeof obj.title === 'string' &&
+    typeof obj.method === 'string' &&
+    typeof obj.endpoint === 'string' &&
     typeof obj.details === 'string' &&
+    typeof obj.ot_impact === 'string' &&
     typeof obj.evidence_json === 'object' &&
     obj.evidence_json !== null &&
     Array.isArray(obj.recommendations_json) &&
@@ -98,7 +126,16 @@ const isValidScan = (data: unknown): data is Scan => {
     typeof obj.id === 'number' &&
     typeof obj.user_id === 'number' &&
     typeof obj.target_url === 'string' &&
+    obj.target_key === 'ot-gateway-demo' &&
+    typeof obj.target_name === 'string' &&
+    isValidGatewayProfile(obj.profile) &&
+    isValidScanExecutionStatus(obj.status) &&
+    typeof obj.authorization_confirmed === 'boolean' &&
+    (typeof obj.score === 'number' || obj.score === null) &&
+    typeof obj.request_count === 'number' &&
+    (typeof obj.duration_ms === 'number' || obj.duration_ms === null) &&
     typeof obj.scan_date === 'string' &&
+    (typeof obj.completed_at === 'string' || obj.completed_at === null) &&
     typeof obj.created_at === 'string' &&
     Array.isArray(obj.test_results) &&
     obj.test_results.every((result: unknown) => isValidTestResult(result))

@@ -19,10 +19,11 @@ export const LoadingOverlay = ({
         <div className="loading-overlay__spinner">
           <div className="spinner" />
         </div>
-        <h2 className="loading-overlay__title">Running Security Scan</h2>
+        <span className="loading-overlay__eyebrow">Controlled OT assessment</span>
+        <h2 className="loading-overlay__title">Executing security controls</h2>
         <p className="loading-overlay__subtitle">
-          Testing {tests.length}{' '}
-          {tests.length === 1 ? 'vulnerability' : 'vulnerabilities'}
+          Running {tests.length.toString()} of 7 bounded checks. This usually
+          takes only a few seconds.
         </p>
         <div className="loading-overlay__tests">
           {tests.map((test) => (

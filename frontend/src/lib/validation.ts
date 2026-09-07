@@ -4,6 +4,7 @@
 // ===========================
 
 import { z } from 'zod'
+import { SCAN_TEST_TYPES } from '@/config/constants'
 
 export const loginSchema = z.object({
   email: z
@@ -34,19 +35,11 @@ export const registerSchema = z
   })
 
 export const scanSchema = z.object({
-  targetUrl: z
-    .url('Invalid URL format')
-    .min(1, 'Target URL is required')
-    .max(2048, 'URL too long'),
-  authToken: z.string().max(1000, 'Token too long').optional(),
-  testsToRun: z
-    .array(z.enum(['rate_limit', 'auth', 'sqli', 'idor']))
-    .min(1, 'Select at least one test'),
-  maxRequests: z
-    .number()
-    .int('Must be a whole number')
-    .min(1, 'Must be at least 1')
-    .max(50, 'Maximum 50 requests allowed'),
+  target: z.literal('ot-gateway-demo'),
+  testsToRun: z.array(z.enum(SCAN_TEST_TYPES)).min(1, 'Select at least one test'),
+  authorizationConfirmed: z.literal(true, {
+    error: 'You must confirm that this local laboratory scan is authorized',
+  }),
 })
 
 export type LoginFormData = z.infer<typeof loginSchema>

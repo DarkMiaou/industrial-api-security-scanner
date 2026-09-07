@@ -8,6 +8,7 @@ import { ProtectedRoute } from '@/components/common/ProtectedRoute'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
+import { ScanReportPage } from '@/pages/ScanReportPage'
 import { ScanResultsPage } from '@/pages/ScanResultsPage'
 
 export const router = createBrowserRouter([
@@ -32,6 +33,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <ScanResultsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/scans/:id/report',
+    element: (
+      <ProtectedRoute>
+        <ScanReportPage />
       </ProtectedRoute>
     ),
   },

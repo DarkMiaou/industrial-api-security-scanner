@@ -1,70 +1,267 @@
 .scan-form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: 1.25rem;
 }
 
-.scan-form__fields {
+.scan-form__target {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgb(14 116 144 / 18%), rgb(15 23 42 / 35%));
+  border: 1px solid rgb(34 211 238 / 24%);
+  border-radius: var(--radius-lg);
+}
+
+.scan-form__target-icon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  color: #a5f3fc;
+  background: rgb(8 145 178 / 20%);
+  border: 1px solid rgb(34 211 238 / 30%);
+  border-radius: 0.75rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.08em;
+}
+
+.scan-form__target-copy,
+.scan-form__target-facts,
+.scan-form__authorization span {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
 }
 
-.scan-form__field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.scan-form__label {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+.scan-form__target-copy strong {
   color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+}
+
+.scan-form__target-copy > span:last-child,
+.scan-form__target-facts,
+.scan-form__authorization small,
+.scan-form__submit > span {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.scan-form__target-facts {
+  gap: 0.25rem;
+  padding-left: 1rem;
+  border-left: 1px solid var(--glass-border);
+}
+
+.scan-form__target-facts b {
+  color: #cbd5e1;
+  margin-right: 0.35rem;
+}
+
+.scan-form__locked {
+  padding: 0.35rem 0.65rem;
+  color: #a5f3fc;
+  background: rgb(8 145 178 / 15%);
+  border: 1px solid rgb(34 211 238 / 20%);
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.scan-form__eyebrow {
+  color: #67e8f9;
+  font-size: 0.68rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.scan-form__controls-heading,
+.scan-form__footer,
+.scan-form__group-heading {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  justify-content: space-between;
+  gap: 1rem;
 }
 
-.scan-form__error {
+.scan-form__controls-heading h3 {
+  margin-top: 0.2rem;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+}
+
+.scan-form__select-all,
+.scan-form__group-toggle {
+  color: #67e8f9;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.scan-form__select-all:hover,
+.scan-form__group-toggle:hover {
+  color: #cffafe;
+}
+
+.scan-form__select-all:focus-visible,
+.scan-form__group-toggle:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.scan-form__groups {
+  display: grid;
+  grid-template-columns: 4fr 3fr;
+  gap: 1rem;
+}
+
+.scan-form__group {
+  min-width: 0;
+  padding: 1rem;
+  background: rgb(15 23 42 / 40%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+}
+
+.scan-form__group-heading {
+  width: 100%;
+  padding: 0 0 0.85rem;
+}
+
+.scan-form__group-heading > span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.scan-form__group-heading strong {
+  color: var(--color-text-primary);
   font-size: var(--font-size-sm);
-  color: var(--color-danger);
+}
+
+.scan-form__group-heading small,
+.scan-form__group-count {
+  color: var(--color-text-tertiary);
+  font-size: 0.72rem;
   font-weight: var(--font-weight-normal);
 }
 
 .scan-form__checkboxes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--spacing-sm);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.scan-form__group:last-child .scan-form__checkboxes {
+  grid-template-columns: 1fr;
 }
 
 .scan-form__checkbox-label {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-sm);
-  background: var(--glass-bg);
+  gap: 0.65rem;
+  min-height: 2.6rem;
+  padding: 0.65rem 0.75rem;
+  color: var(--color-text-secondary);
+  background: rgb(255 255 255 / 3%);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   cursor: pointer;
+  font-size: var(--font-size-xs);
   transition: all var(--transition-base);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
 }
 
-.scan-form__checkbox-label:hover {
-  background: var(--glass-bg-hover);
-  border-color: var(--glass-border-hover);
+.scan-form__checkbox-label:hover,
+.scan-form__checkbox-label--selected {
+  color: var(--color-text-primary);
+  background: rgb(8 145 178 / 12%);
+  border-color: rgb(34 211 238 / 28%);
 }
 
 .scan-form__checkbox {
-  width: 18px;
-  height: 18px;
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  accent-color: #06b6d4;
   cursor: pointer;
-  accent-color: var(--color-accent-primary);
 }
 
-@media (width <= 768px) {
-  .scan-form__checkboxes {
+.scan-form__group-count {
+  display: block;
+  margin-top: 0.65rem;
+}
+
+.scan-form__footer {
+  align-items: flex-start;
+  padding-top: 1rem;
+  border-top: 1px solid var(--glass-border);
+}
+
+.scan-form__authorization-wrap {
+  flex: 1;
+}
+
+.scan-form__authorization {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.scan-form__authorization small {
+  margin-top: 0.2rem;
+  line-height: 1.4;
+}
+
+.scan-form__submit {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.scan-form__error {
+  display: block;
+  margin-top: 0.35rem;
+  color: #fca5a5;
+  font-size: var(--font-size-xs);
+}
+
+@media (width <= 850px) {
+  .scan-form__target {
+    grid-template-columns: auto 1fr;
+  }
+
+  .scan-form__target-facts,
+  .scan-form__locked {
+    display: none;
+  }
+
+  .scan-form__groups {
     grid-template-columns: 1fr;
+  }
+
+  .scan-form__group:last-child .scan-form__checkboxes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (width <= 600px) {
+  .scan-form__controls-heading,
+  .scan-form__footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .scan-form__checkboxes,
+  .scan-form__group:last-child .scan-form__checkboxes {
+    grid-template-columns: 1fr;
+  }
+
+  .scan-form__submit {
+    justify-content: space-between;
   }
 }

@@ -57,6 +57,15 @@
   margin: 0;
 }
 
+.loading-overlay__eyebrow {
+  margin-bottom: calc(var(--spacing-lg) * -0.65);
+  color: #67e8f9;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .loading-overlay__subtitle {
   font-size: var(--font-size-lg);
   color: var(--color-text-secondary);
