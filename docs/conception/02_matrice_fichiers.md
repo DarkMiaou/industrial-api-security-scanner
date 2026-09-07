@@ -68,6 +68,5 @@ This document explains which parts of the upstream project were retained, adapte
 | `docs/VALIDATION.md` | Recorded quality and runtime checks |
 | `docs/decisions.md` | Architectural decision log |
 | `docs/conception/` | Requirements, traceability, and delivery history |
-| `learn/` | Historical upstream educational material; not authoritative for IASS-OT |
 
 Generated folders such as `node_modules`, `dist`, Python caches, and local databases are not source architecture and are excluded from version control.

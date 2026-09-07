@@ -57,7 +57,6 @@ The gateway was restored to the default `vulnerable` profile after validation. T
 ## Documentation and visual review
 
 - Root README, security policy, implementation architecture, decision log, traceability matrix, data model, delivery record, and demo guide are written in English.
-- Historical upstream notes are clearly marked as non-authoritative.
 - The 5–7 minute demo guide covers both profiles, report printing, safety boundaries, and cleanup.
 - Login and registration reference captures were inspected at 1280×720. Their fields are empty and they contain no token, password, email address, reset key, or internal credential.
 

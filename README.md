@@ -227,7 +227,6 @@ frontend/                React interface and printable client-side report
 ot-gateway-demo/         Deterministic simulated water-pump gateway and tests
 conf/                    Docker and Nginx configuration
 docs/                    Architecture, security decisions, validation, and demo guide
-learn/                   Historical upstream learning notes; not authoritative for IASS-OT
 compose.yml              Hardened production-oriented stack
 dev.compose.yml          Local development stack with five services
 ```
