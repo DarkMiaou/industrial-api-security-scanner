@@ -147,13 +147,8 @@ Use `down -v` only when you intentionally want to delete all local accounts and 
 
 ## Reference screenshots
 
-The repository includes the finalized, sanitized interface captures used by the project presentation:
+The repository includes one finalized, sanitized presentation capture:
 
-- [`assets/assessment-control-plan.png`](assets/assessment-control-plan.png): locked target, safety envelope, and seven-control assessment plan;
-- [`assets/profile-comparison.png`](assets/profile-comparison.png): vulnerable and hardened runs shown together in the assessment history;
-- [`assets/vulnerable-assessment.png`](assets/vulnerable-assessment.png): completed vulnerable profile with seven findings and a 0/100 score;
-- [`assets/hardened-assessment.png`](assets/hardened-assessment.png): completed hardened profile with seven safe controls and a 100/100 score;
-- [`assets/login.jpg`](assets/login.jpg): empty sign-in form;
-- [`assets/register.jpg`](assets/register.jpg): empty account-registration form.
+- [`assets/profile-comparison.png`](assets/profile-comparison.png): vulnerable and hardened runs shown together in the assessment history.
 
-The captures were reviewed at full resolution. They contain no email address, token, password, cookie, environment value, terminal history, expanded diagnostic evidence, or unrelated browser overlay.
+The capture was reviewed at full resolution. It contains no email address, token, password, cookie, environment value, terminal history, expanded diagnostic evidence, or unrelated browser overlay.

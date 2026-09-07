@@ -9,25 +9,9 @@ The project is designed for demonstrations, portfolio review, and defensive secu
 
 ## Project preview
 
-### Bounded assessment configuration
-
-The dashboard exposes one locked local target, the 60-request safety envelope, and the seven selectable API and OT controls.
-
-![IASS-OT assessment control plan](docs/assets/assessment-control-plan.png)
-
-### Deterministic profile comparison
-
 The same assessment produces opposite, reproducible outcomes against the deliberately vulnerable and hardened gateway profiles.
 
 ![Vulnerable and hardened assessment comparison](docs/assets/profile-comparison.png)
-
-### Hardened gateway result
-
-![Completed hardened assessment with seven safe controls](docs/assets/hardened-assessment.png)
-
-### Vulnerable gateway result
-
-![Completed vulnerable assessment with seven findings](docs/assets/vulnerable-assessment.png)
 
 ## What the project demonstrates
 

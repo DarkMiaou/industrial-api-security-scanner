@@ -58,18 +58,12 @@ The gateway was restored to the default `vulnerable` profile after validation. T
 
 - Root README, security policy, implementation architecture, decision log, traceability matrix, data model, delivery record, and demo guide are written in English.
 - The 5–7 minute demo guide covers both profiles, report printing, safety boundaries, and cleanup.
-- Login and registration reference captures were inspected at 1280×720. Their fields are empty and they contain no token, password, email address, reset key, or internal credential.
 
 Reference captures:
 
-- `docs/assets/login.jpg`
-- `docs/assets/register.jpg`
-- `docs/assets/assessment-control-plan.png`
 - `docs/assets/profile-comparison.png`
-- `docs/assets/vulnerable-assessment.png`
-- `docs/assets/hardened-assessment.png`
 
-All six captures were inspected at full resolution. The assessment images exclude the signed-in account identity and unrelated browser overlays, while diagnostic evidence remains collapsed or outside the captured frame.
+The capture was inspected at full resolution and excludes the signed-in account identity, diagnostic evidence, and unrelated browser overlays.
 
 ## Interpretation limit
 
