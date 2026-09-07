@@ -9,8 +9,10 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    model_validator,
 )
 
+from core.control_catalog import CONTROL_METADATA
 from core.enums import (
     ScanStatus,
     Severity,
@@ -26,9 +28,23 @@ class TestResultCreate(BaseModel):
     test_name: TestType
     status: ScanStatus
     severity: Severity
+    title: str = ""
+    method: str = ""
+    endpoint: str = ""
     details: str
+    ot_impact: str = ""
     evidence_json: dict[str, Any] = Field(default_factory = dict)
     recommendations_json: list[str] = Field(default_factory = list)
+
+    @model_validator(mode="after")
+    def add_control_metadata(self) -> "TestResultCreate":
+        """Enrich every scanner result with the standard OT presentation fields."""
+        metadata = CONTROL_METADATA[self.test_name]
+        self.title = self.title or metadata.title
+        self.method = self.method or metadata.method
+        self.endpoint = self.endpoint or metadata.endpoint
+        self.ot_impact = self.ot_impact or metadata.ot_impact
+        return self
 
 
 class TestResultResponse(BaseModel):
@@ -43,7 +59,11 @@ class TestResultResponse(BaseModel):
     test_name: TestType
     status: ScanStatus
     severity: Severity
+    title: str
+    method: str
+    endpoint: str
     details: str
+    ot_impact: str
     evidence_json: dict[str, Any]
     recommendations_json: list[str]
     created_at: datetime

@@ -9,12 +9,12 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    HttpUrl,
 )
 from datetime import datetime
+from typing import Literal
 
-from config import settings
-from core.enums import TestType
+from core.enums import GatewayProfile, ScanExecutionStatus, TestType
+from core.target_policy import TargetKey
 from .test_result_schemas import TestResultResponse
 
 
@@ -23,14 +23,11 @@ class ScanRequest(BaseModel):
     Schema for creating a new security scan
     """
 
-    target_url: HttpUrl = Field(max_length = settings.URL_MAX_LENGTH)
-    auth_token: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    target: TargetKey
     tests_to_run: list[TestType] = Field(min_length = 1)
-    max_requests: int = Field(
-        default = settings.DEFAULT_MAX_REQUESTS,
-        ge = 1,
-        le = settings.SCANNER_MAX_CONCURRENT_REQUESTS,
-    )
+    authorization_confirmed: Literal[True]
 
 
 class ScanResponse(BaseModel):
@@ -43,9 +40,18 @@ class ScanResponse(BaseModel):
     id: int
     user_id: int
     target_url: str
+    target_key: TargetKey
+    target_name: str
+    profile: GatewayProfile
+    status: ScanExecutionStatus
+    authorization_confirmed: bool
+    score: int | None
+    request_count: int
+    duration_ms: int | None
     scan_date: datetime
+    completed_at: datetime | None
     created_at: datetime
-    test_results: list[TestResultResponse] = []
+    test_results: list[TestResultResponse] = Field(default_factory=list)
 
     @property
     def total_tests(self) -> int:

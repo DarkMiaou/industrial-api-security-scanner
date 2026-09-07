@@ -12,6 +12,7 @@ from sqlalchemy.orm import (
 )
 
 from config import settings
+from core.enums import GatewayProfile, ScanExecutionStatus
 from models.Scan import Scan
 
 
@@ -24,6 +25,10 @@ class ScanRepository:
         db: Session,
         user_id: int,
         target_url: str,
+        target_key: str,
+        target_name: str,
+        profile: GatewayProfile,
+        authorization_confirmed: bool,
         commit: bool = True
     ) -> Scan:
         """
@@ -41,12 +46,38 @@ class ScanRepository:
         scan = Scan(
             user_id = user_id,
             target_url = target_url,
+            target_key=target_key,
+            target_name=target_name,
+            profile=profile,
+            status=ScanExecutionStatus.RUNNING,
+            authorization_confirmed=authorization_confirmed,
+            request_count=0,
             scan_date = datetime.now(UTC),
         )
         db.add(scan)
         if commit:
             db.commit()
             db.refresh(scan)
+        return scan
+
+    @staticmethod
+    def finalize_scan(
+        db: Session,
+        scan: Scan,
+        *,
+        status: ScanExecutionStatus,
+        score: int | None,
+        request_count: int,
+        duration_ms: int,
+    ) -> Scan:
+        """Persist the terminal execution metrics for one scan."""
+        scan.status = status
+        scan.score = score
+        scan.request_count = request_count
+        scan.duration_ms = duration_ms
+        scan.completed_at = datetime.now(UTC)
+        db.commit()
+        db.refresh(scan)
         return scan
 
     @staticmethod

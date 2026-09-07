@@ -36,3 +36,22 @@ class TestType(StrEnum):
     AUTH = "auth"
     SQLI = "sqli"
     IDOR = "idor"
+    OT_COMMAND_AUTHZ = "ot_command_authz"
+    OT_AUDIT = "ot_audit"
+    OT_RATE_LIMIT = "ot_rate_limit"
+
+
+class GatewayProfile(StrEnum):
+    """Runtime security profile reported by the local gateway."""
+
+    VULNERABLE = "vulnerable"
+    HARDENED = "hardened"
+
+
+class ScanExecutionStatus(StrEnum):
+    """Lifecycle state of one complete scan execution."""
+
+    RUNNING = "running"
+    COMPLETED = "completed"
+    PARTIAL = "partial"
+    FAILED = "failed"

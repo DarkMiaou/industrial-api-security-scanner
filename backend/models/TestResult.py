@@ -7,6 +7,7 @@ from sqlalchemy import (
     Column,
     Enum,
     Integer,
+    String,
     Text,
     ForeignKey,
 )
@@ -50,7 +51,11 @@ class TestResult(BaseModel):
         nullable = False,
         index = True,
     )
+    title = Column(String(255), nullable=False)
+    method = Column(String(10), nullable=False)
+    endpoint = Column(String(255), nullable=False)
     details = Column(Text, nullable = False)
+    ot_impact = Column(Text, nullable=False)
     evidence_json = Column(JSON, nullable = False, default = dict)
     recommendations_json = Column(
         JSON,

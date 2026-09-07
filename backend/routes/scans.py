@@ -7,11 +7,13 @@ from fastapi import (
     APIRouter,
     Depends,
     Request,
+    Query,
     status,
 )
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from config import settings
 from core.database import get_db
@@ -37,13 +39,16 @@ limiter = Limiter(key_func=get_remote_address)
 async def create_scan(
     request: Request,
     scan_request: ScanRequest,
-    db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user),
 ) -> ScanResponse:
     """
     Create and execute a new security scan
     """
-    return ScanService.run_scan(db, current_user.id, scan_request)
+    return await run_in_threadpool(
+        ScanService.run_scan_in_new_session,
+        current_user.id,
+        scan_request,
+    )
 
 
 @router.get(
@@ -54,8 +59,12 @@ async def create_scan(
 @limiter.limit(settings.API_RATE_LIMIT_DEFAULT)
 async def get_user_scans(
     request: Request,
-    skip: int = 0,
-    limit: int | None = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(
+        default=settings.DEFAULT_PAGINATION_LIMIT,
+        ge=1,
+        le=settings.MAX_PAGINATION_LIMIT,
+    ),
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user),
 ) -> list[ScanResponse]:

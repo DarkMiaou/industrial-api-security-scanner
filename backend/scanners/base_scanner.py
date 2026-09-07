@@ -1,105 +1,46 @@
-"""
-©AngelaMos | 2025
-Base scanner class with common HTTP logic and evidence collection
-"""
+"""Base scanner with the mandatory IASS-OT HTTP safety envelope."""
 
 from __future__ import annotations
 
-import time
-import random
-import statistics
-from typing import Any
-from urllib.parse import urljoin
 from abc import ABC, abstractmethod
+from typing import Any
 
 import requests
 
 from config import settings
+from core.redaction import redact, response_excerpt
+from core.request_budget import RequestBudget
+from core.safe_http import SafeScannerClient
+from core.target_policy import ResolvedTarget
 from schemas.test_result_schemas import TestResultCreate
 
 
 class BaseScanner(ABC):
-    """
-    Abstract base class for all security scanners
+    """Common bounded HTTP and evidence behavior for every scanner engine."""
 
-    Provides common HTTP functionality, request spacing, retry logic,
-    and evidence collection. Specific scanners inherit and implement scan().
-    """
     def __init__(
         self,
-        target_url: str,
-        auth_token: str | None = None,
-        max_requests: int | None = None,
-    ):
-        """
-        Initialize scanner with target and configuration
-
-        Args:
-            target_url: Base URL of API to scan
-            auth_token: Optional authentication token
-            max_requests: Optional limit on requests (from settings if None)
-        """
-        self.target_url = target_url.rstrip("/")
-        self.auth_token = auth_token
-        self.max_requests = max_requests or settings.DEFAULT_MAX_REQUESTS
-        self.session = self._create_session()
-        self.last_request_time = 0.0
-        self.request_count = 0
-
-    def _create_session(self) -> requests.Session:
-        """
-        Create persistent HTTP session with proper headers
-
-        Returns:
-            requests.Session: Configured session object
-        """
-        session = requests.Session()
-
-        session.headers.update(
-            {
-                "User-Agent":
-                f"{settings.APP_NAME}/{settings.VERSION}",
-                "Accept": "application/json",
-            }
-        )
-
-        if self.auth_token:
-            session.headers.update(
-                {"Authorization": f"Bearer {self.auth_token}"}
-            )
-
-        return session
-
-    def _wait_before_request(
-        self,
-        jitter_ms: int | None = None
+        target: ResolvedTarget,
+        budget: RequestBudget | None = None,
     ) -> None:
-        """
-        Implement request spacing to avoid overwhelming target
+        if not isinstance(target, ResolvedTarget):
+            raise TypeError("Scanners require a server-resolved target")
 
-        Based on research: production-safe scanning requires spacing
-        requests to avoid triggering rate limits or affecting service.
-
-        Args:
-            jitter_ms: Random jitter in milliseconds to add (DEFAULT_JITTER_MS)
-        """
-        if jitter_ms is None:
-            jitter_ms = settings.DEFAULT_JITTER_MS
-
-        required_delay = 1.0 / (
-            self.max_requests /
-            settings.SCANNER_RATE_LIMIT_WINDOW_SECONDS
+        self.target = target
+        self.budget = budget or RequestBudget(settings.SCANNER_REQUEST_BUDGET)
+        self.client = SafeScannerClient(
+            target=target,
+            budget=self.budget,
+            connect_timeout=settings.SCANNER_CONNECTION_TIMEOUT,
+            read_timeout=settings.SCANNER_READ_TIMEOUT,
+            max_response_bytes=settings.SCANNER_MAX_RESPONSE_BYTES,
+            user_agent=f"{settings.APP_NAME}/{settings.VERSION}",
         )
-        jitter = random.uniform(0, jitter_ms / 1000.0)
 
-        elapsed = time.time() - self.last_request_time
-
-        if elapsed < required_delay:
-            time.sleep(required_delay - elapsed + jitter)
-        else:
-            time.sleep(jitter)
-
-        self.last_request_time = time.time()
+    @property
+    def request_count(self) -> int:
+        """Number of outbound attempts consumed by the shared scan budget."""
+        return self.budget.count
 
     def make_request(
         self,
@@ -107,183 +48,72 @@ class BaseScanner(ABC):
         endpoint: str,
         **kwargs: Any,
     ) -> requests.Response:
-        """
-        Make HTTP request with retry logic and rate limit handling
+        """Delegate to the only network path authorized for scanners."""
+        return self.client.request(method, endpoint, **kwargs)
 
-        Implements exponential backoff for server errors and respects
-        Retry-After headers for 429 responses.
-
-        Args:
-            method: HTTP method (GET, POST, etc.)
-            endpoint: Endpoint path (will be joined with target_url)
-            **kwargs: Additional arguments passed to requests
-
-        Returns:
-            requests.Response: Response object
-
-        Raises:
-            requests.RequestException: If request fails after retries
-        """
-        self._wait_before_request()
-
-        url = urljoin(self.target_url, endpoint)
-        retry_count = 0
-        backoff_factor = 2.0
-
-        kwargs.setdefault(
-            "timeout",
-            settings.SCANNER_CONNECTION_TIMEOUT
-        )
-
-        while retry_count <= settings.DEFAULT_RETRY_COUNT:
-            try:
-                start_time = time.time()
-                response = self.session.request(method, url, **kwargs)
-                setattr(
-                    response,
-                    "request_time",
-                    time.time() - start_time
-                )
-
-                self.request_count += 1
-
-                if response.status_code == 429:
-                    retry_after = response.headers.get(
-                        "Retry-After",
-                        str(settings.DEFAULT_RETRY_WAIT_SECONDS)
-                    )
-                    wait_time = (
-                        int(retry_after) if retry_after.isdigit() else
-                        settings.DEFAULT_RETRY_WAIT_SECONDS
-                    )
-                    time.sleep(wait_time)
-                    retry_count += 1
-                    continue
-
-                if response.status_code >= 500 and retry_count < settings.DEFAULT_RETRY_COUNT:
-                    wait_time = backoff_factor**retry_count
-                    time.sleep(wait_time)
-                    retry_count += 1
-                    continue
-
-                return response
-
-            except (requests.Timeout, requests.ConnectionError):
-                if retry_count < settings.DEFAULT_RETRY_COUNT:
-                    wait_time = backoff_factor**retry_count
-                    time.sleep(wait_time)
-                    retry_count += 1
-                else:
-                    raise
-
-        return response
-
-    def get_baseline_timing(
+    def authenticate_gateway(
         self,
-        endpoint: str,
-        samples: int | None = None
-    ) -> tuple[float,
-               float]:
-        """
-        Establish baseline response time for an endpoint
+        username: str,
+        password: str,
+    ) -> tuple[str, dict[str, Any]]:
+        """Obtain one demo gateway token while returning only redacted evidence."""
+        credentials = {"username": username, "password": password}
+        response = self.make_request("POST", "/auth/token", json=credentials)
+        evidence = self.collect_evidence(response, payload=credentials)
+        if response.status_code != 200:
+            raise RuntimeError(
+                f"Gateway authentication failed for {username}: HTTP {response.status_code}"
+            )
 
-        Critical for time-based detection (e.g., blind SQLi). Takes multiple
-        samples and calculates mean and standard deviation.
+        try:
+            token = response.json()["access_token"]
+        except (KeyError, TypeError, ValueError) as exc:
+            raise RuntimeError(
+                f"Gateway authentication returned no token for {username}"
+            ) from exc
+        if not isinstance(token, str) or not token:
+            raise RuntimeError(
+                f"Gateway authentication returned an invalid token for {username}"
+            )
+        return token, evidence
 
-        Args:
-            endpoint: Endpoint to test
-            samples: Number of samples to take (DEFAULT_BASELINE_SAMPLES)
-
-        Returns:
-            tuple[float, float]: (mean_time, stdev_time) in seconds
-        """
-        if samples is None:
-            samples = settings.DEFAULT_BASELINE_SAMPLES
-
-        times = []
-
-        for _ in range(samples):
-            response = self.make_request("GET", endpoint)
-            times.append(getattr(response, "request_time", 0.0))
-            time.sleep(0.5)
-
-        return statistics.mean(times), statistics.stdev(times)
+    def reset_gateway(self) -> dict[str, Any]:
+        """Restore the deterministic station state without exposing the demo key."""
+        response = self.make_request(
+            "POST",
+            "/demo/reset",
+            headers={"X-Demo-Key": settings.OT_DEMO_RESET_KEY},
+        )
+        evidence = self.collect_evidence(response)
+        if response.status_code != 200:
+            raise RuntimeError(f"Gateway reset failed: HTTP {response.status_code}")
+        return evidence
 
     def collect_evidence(
         self,
         response: requests.Response,
         payload: Any | None = None,
         **additional_data: Any,
-    ) -> dict[str,
-              Any]:
-        """
-        Collect evidence from test execution with sensitive data redaction
-
-        Args:
-            response: HTTP response object
-            payload: Payload used in test
-            **additional_data: Additional evidence data
-
-        Returns:
-            dict[str, Any]: Evidence dictionary
-        """
-        evidence = {
-            "status_code":
-            response.status_code,
-            "response_time_ms":
-            round(getattr(response,
-                          "request_time",
-                          0.0) * 1000,
-                  2),
-            "response_length":
-            len(response.text),
-            "headers":
-            self._redact_sensitive_headers(dict(response.headers)),
+    ) -> dict[str, Any]:
+        """Create a size-bounded, recursively redacted evidence object."""
+        evidence: dict[str, Any] = {
+            "status_code": response.status_code,
+            "response_time_ms": round(
+                getattr(response, "request_time", 0.0) * 1000,
+                2,
+            ),
+            "response_length": len(response.content),
+            "response_excerpt": response_excerpt(
+                response.text,
+                settings.SCANNER_EVIDENCE_EXCERPT_CHARS,
+            ),
+            "headers": redact(dict(response.headers)),
         }
-
         if payload is not None:
-            evidence["payload"] = str(payload)
-
-        evidence.update(additional_data)
-
+            evidence["payload"] = redact(payload)
+        evidence.update(redact(additional_data))
         return evidence
-
-    def _redact_sensitive_headers(self,
-                                  headers: dict[str,
-                                                str]) -> dict[str,
-                                                              str]:
-        """
-        Redact sensitive header values for evidence collection
-
-        Args:
-            headers: Original headers dictionary
-
-        Returns:
-            dict[str, str]: Headers with sensitive values redacted
-        """
-        sensitive_headers = [
-            "authorization",
-            "cookie",
-            "x-api-key",
-            "x-auth-token",
-        ]
-
-        redacted = {}
-        for key, value in headers.items():
-            if key.lower() in sensitive_headers:
-                redacted[key] = "[REDACTED]"
-            else:
-                redacted[key] = value
-
-        return redacted
 
     @abstractmethod
     def scan(self) -> TestResultCreate:
-        """
-        Execute the security scan
-
-        Must be implemented by specific scanner classes.
-
-        Returns:
-            TestResultCreate: Result of the scan
-        """
+        """Execute one security control."""

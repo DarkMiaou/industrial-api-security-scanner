@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     )
 
     # Application metadata
-    APP_NAME: str = "API Security Tester"
-    VERSION: str = "1.0.0"
+    APP_NAME: str = "IASS-OT"
+    VERSION: str = "1.0.1"
     DEBUG: bool = False
 
     # Database configuration
@@ -43,14 +43,16 @@ class Settings(BaseSettings):
     # CORS origins (comma-separated string)
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
 
-    # Scanner configuration - Default values
-    DEFAULT_MAX_REQUESTS: int = 100
-    DEFAULT_TIMEOUT_SECONDS: int = 10
-    DEFAULT_RETRY_COUNT: int = 3
+    # Closed OT target. TargetPolicy verifies this exact Docker-internal URL.
+    OT_TARGET_KEY: str = "ot-gateway-demo"
+    OT_GATEWAY_URL: str = "http://ot-gateway-demo:8081"
+    OT_GATEWAY_DISPLAY_NAME: str = "Water Pump Gateway"
+    OT_DEMO_RESET_KEY: str = "local-demo-reset-key"
 
-    # Scanner rate limiting (outgoing requests)
-    SCANNER_RATE_LIMIT_THRESHOLD: int = 100
-    SCANNER_RATE_LIMIT_WINDOW_SECONDS: int = 60
+    # Scanner safety envelope
+    SCANNER_REQUEST_BUDGET: int = 60
+    SCANNER_MAX_RESPONSE_BYTES: int = 1_048_576
+    SCANNER_EVIDENCE_EXCERPT_CHARS: int = 500
 
     # API endpoint rate limiting (incoming requests - slowapi format)
     API_RATE_LIMIT_LOGIN: str = "20/minute"
@@ -59,7 +61,7 @@ class Settings(BaseSettings):
     API_RATE_LIMIT_DEFAULT: str = "100/minute"
 
     # Pagination
-    DEFAULT_PAGINATION_LIMIT: int = 100
+    DEFAULT_PAGINATION_LIMIT: int = 20
     MAX_PAGINATION_LIMIT: int = 1000
 
     # Field validation constants
@@ -69,14 +71,8 @@ class Settings(BaseSettings):
     URL_MAX_LENGTH: int = 2048
 
     # Scanner timeouts and limits
-    SCANNER_MAX_CONCURRENT_REQUESTS: int = 50
-    SCANNER_CONNECTION_TIMEOUT: int = 180
-    SCANNER_READ_TIMEOUT: int = 180
-
-    # Scanner request spacing and timing
-    DEFAULT_JITTER_MS: int = 100
-    DEFAULT_RETRY_WAIT_SECONDS: int = 60
-    DEFAULT_BASELINE_SAMPLES: int = 10
+    SCANNER_CONNECTION_TIMEOUT: int = 3
+    SCANNER_READ_TIMEOUT: int = 5
 
     @property
     def cors_origins_list(self) -> list[str]:
@@ -101,4 +97,3 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
-

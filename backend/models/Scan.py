@@ -8,8 +8,11 @@ from datetime import (
     datetime,
 )
 from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
     Column,
     DateTime,
+    Enum,
     ForeignKey,
     Integer,
     String,
@@ -17,6 +20,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from config import settings
+from core.enums import GatewayProfile, ScanExecutionStatus
 from .Base import BaseModel
 
 
@@ -26,6 +30,11 @@ class Scan(BaseModel):
     """
 
     __tablename__ = "scans"
+    __table_args__ = (
+        CheckConstraint("score BETWEEN 0 AND 100", name="ck_scans_score_range"),
+        CheckConstraint("request_count >= 0", name="ck_scans_request_count"),
+        CheckConstraint("duration_ms >= 0", name="ck_scans_duration_ms"),
+    )
 
     user_id = Column(
         Integer,
@@ -38,17 +47,56 @@ class Scan(BaseModel):
         String(settings.URL_MAX_LENGTH),
         nullable = False,
     )
+    target_key = Column(
+        String(64),
+        nullable=False,
+        default="ot-gateway-demo",
+        server_default="ot-gateway-demo",
+    )
+    target_name = Column(
+        String(255),
+        nullable=False,
+        default="Water Pump Gateway",
+        server_default="Water Pump Gateway",
+    )
+    profile = Column(
+        Enum(GatewayProfile),
+        nullable=False,
+    )
+    status = Column(
+        Enum(ScanExecutionStatus),
+        nullable=False,
+        default=ScanExecutionStatus.RUNNING,
+        server_default=ScanExecutionStatus.RUNNING.name,
+        index=True,
+    )
+    authorization_confirmed = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+    score = Column(Integer, nullable=True)
+    request_count = Column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+    duration_ms = Column(Integer, nullable=True)
     scan_date = Column(
         DateTime(timezone = True),
         default = lambda: datetime.now(UTC),
         nullable = False,
     )
+    completed_at = Column(DateTime(timezone=True), nullable=True)
 
     user = relationship("User", backref = "scans")
     test_results = relationship(
         "TestResult",
         back_populates = "scan",
         cascade = "all, delete-orphan",
+        order_by="TestResult.id",
     )
 
     def __repr__(self) -> str:
