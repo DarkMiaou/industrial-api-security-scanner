@@ -8,6 +8,20 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 
 mod backend 'backend/Justfile'
 
+test-backend:
+    docker build --target test -f conf/docker/dev/fastapi.docker -t iass-backend-test:local .
+    docker run --rm iass-backend-test:local sh -lc 'ruff check . && pytest -p no:cacheprovider'
+
+test-gateway:
+    docker build --target test -f ot-gateway-demo/Dockerfile -t iass-ot-gateway-test:local .
+    docker run --rm iass-ot-gateway-test:local sh -lc 'ruff check --no-cache app tests && pytest -p no:cacheprovider'
+
+check-frontend:
+    docker compose -f dev.compose.yml run --rm --no-deps frontend sh -lc 'pnpm run typecheck && pnpm run lint && pnpm run lint:scss && pnpm run build'
+
+check: test-backend test-gateway check-frontend
+    @echo "All IASS-OT checks passed"
+
 # Show available commands
 default:
     @just --list --unsorted

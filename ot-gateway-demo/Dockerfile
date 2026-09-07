@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir ".[dev]"
 COPY ot-gateway-demo/tests ./tests
 USER gateway
 
-CMD ["pytest"]
+CMD ["pytest", "-p", "no:cacheprovider"]
 
 FROM base AS runtime
 

@@ -1,7 +1,7 @@
 # ⒸAngelaMos | 2025
 # Development FastAPI Dockerfile
 
-FROM python:3.13-slim
+FROM python:3.13-slim AS base
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -24,6 +24,14 @@ COPY backend/ .
 
 # Install Python dependencies from the project metadata
 RUN pip install --no-cache-dir .
+
+FROM base AS test
+
+RUN pip install --no-cache-dir ".[test]"
+
+CMD ["pytest", "-p", "no:cacheprovider"]
+
+FROM base AS development
 
 # Expose port
 EXPOSE 8000

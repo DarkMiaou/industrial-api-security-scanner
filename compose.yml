@@ -54,6 +54,13 @@ services:
       BACKEND_HOST: ${BACKEND_HOST:-0.0.0.0}
       BACKEND_PORT: ${BACKEND_PORT:-8000}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://yourdomain.com}
+      OT_GATEWAY_URL: http://ot-gateway-demo:8081
+      OT_DEMO_RESET_KEY: ${OT_DEMO_RESET_KEY}
+      SCANNER_REQUEST_BUDGET: 60
+      SCANNER_CONNECTION_TIMEOUT: 3
+      SCANNER_READ_TIMEOUT: 5
+      SCANNER_MAX_RESPONSE_BYTES: 1048576
+      SCANNER_EVIDENCE_EXCERPT_CHARS: 500
     expose:
       - "8000"
     depends_on:
@@ -65,7 +72,7 @@ services:
       - apisec_network
     restart: always
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -83,7 +90,8 @@ services:
       # Uncomment for HTTPS - or dns proxy with Cloudfare:
       # - "${HOST_NGINX_HTTPS_PORT:-443}:443"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - apisec_network
     restart: always

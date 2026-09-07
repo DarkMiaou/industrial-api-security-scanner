@@ -26,6 +26,9 @@ packages = ["app"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+filterwarnings = [
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]
 
 [tool.ruff]
 target-version = "py312"
@@ -33,4 +36,3 @@ line-length = 95
 
 [tool.ruff.lint]
 select = ["B", "E", "F", "I", "SIM", "UP"]
-
