@@ -1,43 +1,20 @@
-# Conception IASS-OT - dossier directeur
+# IASS-OT Design Record
 
-Statut : conception validable, aucune fonctionnalité OT implémentée.
+This directory preserves the requirements and implementation plan used to transform the original generic API scanner into IASS-OT. The seven implementation lots are now complete.
 
-## Objectif
+The authoritative description of the running system is [../ARCHITECTURE.md](../ARCHITECTURE.md). The files in this directory explain why the system was built this way and how the delivered result maps back to the original requirements.
 
-Ce dossier transforme le dossier de réalisation IASS-OT en plan technique exécutable. Il fixe ce qui doit être construit, ce qui existe déjà, les fichiers touchés, l'architecture cible, le modèle de données et les critères d'acceptation.
+## Contents
 
-## Documents
+- [01 — Requirements and traceability](01_exigences_et_tracabilite.md): final requirement status and verification evidence.
+- [02 — File responsibility matrix](02_matrice_fichiers.md): what is retained, adapted, or newly introduced.
+- [03 — Delivered architecture](03_architecture_cible.md): concise implementation view and safety invariants.
+- [04 — Data model](04_modele_de_donnees.md): persisted entities, enums, evidence, and scoring.
+- [05 — Delivery lots and validation](05_lots_et_validation.md): the completed implementation sequence and acceptance criteria.
+- [Decision log](../decisions.md): the main design decisions and later adjustments.
 
-1. [Exigences et traçabilité](01_exigences_et_tracabilite.md)
-2. [Matrice d'impact des fichiers](02_matrice_fichiers.md)
-3. [Architecture cible](03_architecture_cible.md)
-4. [Modèle de données cible](04_modele_de_donnees.md)
-5. [Lots de réalisation et validation](05_lots_et_validation.md)
-6. [Journal des décisions](../decisions.md)
+## Delivered scope
 
-## Périmètre arrêté
+IASS-OT assesses one simulated pumping-station gateway through seven deterministic controls. The user selects a closed target key, confirms authorization, and can review a stored scan or generate a printable browser report. The gateway runs in either a deliberately vulnerable or hardened profile selected at container startup.
 
-- Une seule cible : `ot-gateway-demo:8081`, résolue côté serveur.
-- Un seul procédé simulé : station de pompage avec deux pompes et deux zones.
-- Deux profils exclusifs au démarrage : `vulnerable` et `hardened`.
-- Quatre rôles dans la gateway : Guest, Operator, Supervisor et Admin.
-- Sept contrôles : Auth, BOLA/IDOR, SQLi simple, rate limiting classique, autorisation OT, audit OT et rate limiting OT.
-- Requêtes locales, faibles volumes et payloads non destructifs uniquement.
-- Rapport HTML imprimable ; aucun générateur PDF serveur.
-- Aucune découverte OpenAPI, aucun protocole industriel réel, aucun matériel réel, aucun SOC, Redis ou Celery.
-
-## Lecture de la situation actuelle
-
-Le socle est réutilisable pour environ la moitié de la plateforme : React, FastAPI, PostgreSQL, JWT, propriété des scans, historique, Docker et Nginx. En revanche, la logique de scan devra être spécialisée. Les principaux écarts sont :
-
-- URL libre et jeton cible saisi par l'utilisateur ;
-- absence de gateway OT ;
-- quatre scanners génériques et non déterministes ;
-- redirections HTTP permises et timeouts trop longs ;
-- absence de budget global réellement appliqué ;
-- absence des champs score, profil, durée, compteurs et impact OT ;
-- absence de rapport et de tests automatisés.
-
-## Règle de passage à l'implémentation
-
-L'implémentation ne commence qu'après validation de ce dossier. Toute modification ultérieure du périmètre doit être ajoutée à `docs/decisions.md` avant le code correspondant.
+The project is an educational laboratory. It is not an IEC 62443 certification tool and must not be aimed at real industrial assets.

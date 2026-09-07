@@ -1,87 +1,63 @@
-# Journal des décisions IASS-OT
+# IASS-OT Decision Log
 
-Ce fichier enregistre les choix qui précisent le dossier de réalisation. Toute déviation future doit être ajoutée ici avant l'implémentation correspondante.
+This log captures the decisions that materially shaped the delivered system.
 
-## DEC-001 - Quatre composants logiques, cinq conteneurs en développement
+## DEC-001 — Five development containers
 
-**Décision :** l'architecture reste présentée comme frontend/nginx, backend, PostgreSQL et gateway. En développement, Vite et Nginx sont séparés, donc cinq conteneurs techniques.
+The development environment uses nginx, React, FastAPI, PostgreSQL, and a separate OT gateway container. This keeps the simulated asset outside the scanner process and makes the trust boundary visible.
 
-**Raison :** conserver le HMR existant sans fausser le schéma logique du dossier.
+## DEC-002 — Closed target selection
 
-## DEC-002 - La cible utilisateur devient une clé fermée
+The browser sends `ot-gateway-demo`, not a URL. The backend alone resolves that value to `http://ot-gateway-demo:8081`, preventing the scanner from becoming a general-purpose SSRF proxy.
 
-**Décision :** `ScanRequest` accepte `target: "ot-gateway-demo"`, jamais une URL. `target_url` reste en base comme valeur canonique résolue côté serveur.
+## DEC-003 — Server-owned limits and credentials
 
-**Raison :** supprimer le risque SSRF tout en limitant la migration du modèle existant.
+Request budgets, timeouts, response limits, gateway credentials, and the reset key are configuration owned by the backend. The user cannot raise limits or provide target credentials.
 
-## DEC-003 - Suppression du token cible et de max_requests côté utilisateur
+## DEC-004 — Profile fixed at gateway startup
 
-**Décision :** le frontend ne demande plus de token gateway ni de nombre de requêtes. Les identités et budgets sont imposés par le backend.
+`OT_PROFILE` is read when the gateway container starts. Changing profile therefore requires recreating the gateway, which produces a clear and reproducible demonstration state.
 
-**Raison :** un scénario déterministe et sûr ne doit pas dépendre d'une saisie libre.
+## DEC-005 — Gateway restricted to the internal network
 
-## DEC-004 - Profil fixé au démarrage
+Port 8081 is never published and nginx has no gateway route. Only the backend can reach the simulated OT service.
 
-**Décision :** `OT_PROFILE` est lu au démarrage du conteneur gateway. Aucun endpoint ne bascule le profil à chaud.
+## DEC-006 — In-memory process state
 
-**Raison :** rendre la démonstration reproductible et empêcher un changement accidentel pendant un scan.
+Pumps, telemetry, rate-limit counters, and audit records remain in memory. `/demo/reset` restores a deterministic scenario and is protected by an internal key.
 
-## DEC-005 - Gateway uniquement sur le réseau Docker
+## DEC-007 — Separate identity domains
 
-**Décision :** le port 8081 n'est pas publié sur l'hôte par défaut. Les tests manuels utilisent le réseau Compose ou une surcharge locale explicitement documentée.
+Platform users authenticate with the platform JWT. Guest, Operator, Supervisor, and Admin gateway identities use a distinct issuer, signing secret, and purpose.
 
-**Raison :** respecter la cible interne du dossier et réduire l'exposition.
+## DEC-008 — Synchronous scanner in a worker thread
 
-## DEC-006 - Etat et audit gateway en mémoire
+The scanner uses the synchronous `requests` client. The asynchronous FastAPI route delegates orchestration to a threadpool so blocking network calls do not run on the event loop.
 
-**Décision :** état du procédé, compteurs de limite et audit sont en mémoire et restaurés par `/demo/reset`.
+## DEC-009 — Client-side printable report
 
-**Raison :** aucune persistance industrielle n'est nécessaire ; le reset déterministe est plus important.
+The early design proposed a backend HTML endpoint. The delivered report is a protected React route at `/scans/:id/report`; it loads only the owner-authorized JSON scan contract, contains no raw credentials, and uses a dedicated print stylesheet.
 
-## DEC-007 - Identités gateway séparées
+## DEC-010 — Purpose-built data model
 
-**Décision :** les JWT de la plateforme et de la gateway ont des secrets, émetteurs et usages distincts. Les rôles OT ne sont pas ajoutés au modèle User.
+`Scan` and `TestResult` contain the metadata required by the seven fixed controls. The model is intentionally not a universal vulnerability-management schema.
 
-**Raison :** séparer la sécurité du produit de celle du système simulé.
+## DEC-011 — Lightweight local schema upgrade
 
-## DEC-008 - Workflow synchrone dans un threadpool
+New databases use SQLAlchemy model creation. Existing inherited local databases can apply the idempotent `backend/migrations/lot5_schema.sql`; introducing a full migration framework is outside v1.0.
 
-**Décision :** pas de Celery/Redis. Le workflow synchrone est exécuté avec `run_in_threadpool` depuis la route async.
+## DEC-012 — Profile derived from the scan
 
-**Raison :** éviter de bloquer la boucle FastAPI sans élargir l'architecture.
+The early design proposed an authenticated `/config/scan` route. It was not needed: the frontend owns fixed public target metadata, while the authoritative gateway profile is captured from the health preflight and returned with every completed scan.
 
-## DEC-009 - Rapport HTML côté backend
+## DEC-013 — Persist authorization confirmation
 
-**Décision :** route propriétaire `/scans/{id}/report`, template HTML et impression navigateur. Aucun PDF serveur.
+The scan request and database record both retain the user's explicit authorization confirmation. This is an accountability signal, not a substitute for legal permission.
 
-**Raison :** rapport stable, partage du contrôle d'accès et périmètre borné.
+## DEC-014 — Preserve useful upstream structure
 
-## DEC-010 - Modèle de données enrichi mais non universel
+Authentication, database foundations, routing conventions, nginx, and frontend tooling were retained where they remained useful. Scanner and interface behavior were adapted without an unnecessary full rewrite.
 
-**Décision :** ajouter profil, statut, score, compteurs, durée et champs de constat OT aux trois entités existantes. Pas de tables Site, Asset ou Protocol.
+## DEC-015 — Error results do not improve or reduce the score
 
-**Raison :** le produit représente un scénario unique et ne prétend pas être une plateforme industrielle générique.
-
-## DEC-011 - Base locale neuve pour le passage OT
-
-**Décision :** la v1 documente la recréation du volume PostgreSQL. Un environnement Alembic complet est reporté après le MVP.
-
-**Raison :** le dépôt n'a pas de structure Alembic opérationnelle et aucune conservation des données historiques n'est exigée.
-
-## DEC-012 - Route de configuration authentifiée
-
-**Décision :** ajouter `GET /config/scan` pour donner à l'UI la cible, le profil et les tests disponibles.
-
-**Raison :** le frontend ne doit pas inventer une information de sécurité ou diverger du backend.
-
-## DEC-013 - Confirmation d'autorisation persistée
-
-**Décision :** la case UI produit `authorization_confirmed: true` et la valeur est conservée dans Scan.
-
-**Raison :** rendre l'autorisation explicite et démontrable, même dans un laboratoire local.
-
-## DEC-014 - Pas de suppression prématurée du code source
-
-**Décision :** les dépendances et modules inutilisés sont retirés seulement au lot de finition après vérification des références et tests.
-
-**Raison :** réduire le risque de casser le socle avant que le parcours OT remplaçant soit fonctionnel.
+Execution errors are reported separately and influence `partial` or `failed` state. They do not subtract score because an unexecuted check is not evidence of a vulnerability; the status prevents it from being mistaken for assurance.

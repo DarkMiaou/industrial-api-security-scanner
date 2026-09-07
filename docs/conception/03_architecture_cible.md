@@ -1,210 +1,62 @@
-# Architecture IASS-OT cible
+# Delivered IASS-OT Architecture
 
-## 1. Vue logique
+The target architecture defined during the design phase is now implemented. See [../ARCHITECTURE.md](../ARCHITECTURE.md) for the complete runtime documentation.
 
-```text
-Navigateur
-   |
-   v
-Nginx / React
-   | /api
-   v
-FastAPI Scanner ---------------------- PostgreSQL
-   |
-   | HTTP interne seulement
-   | cible résolue par TargetPolicy
-   v
-OT Gateway Demo :8081
-   |- état station de pompage
-   |- JWT et rôles de démonstration
-   |- RBAC / zones
-   |- audit mémoire
-   `- rate limiting déterministe
-```
-
-Les quatre composants logiques sont frontend/nginx, scanner, base et gateway. En développement, Vite et Nginx restent deux conteneurs distincts : il y aura donc cinq conteneurs techniques, sans changer l'architecture logique.
-
-## 2. Frontières de confiance
-
-### Navigateur vers scanner
-
-- JWT de la plateforme uniquement.
-- L'utilisateur choisit des tests, pas une URL ni un jeton gateway.
-- La confirmation d'autorisation est obligatoire et auditée dans le Scan.
-
-### Scanner vers gateway
-
-- Réseau Docker interne.
-- Adresse produite par `TargetPolicy`, jamais concaténée depuis une saisie.
-- Jetons de démonstration conservés dans l'environnement backend et expurgés.
-- Redirections interdites, timeouts 3/5 s, réponse 1 Mio maximum.
-- Budget partagé de 60 appels pour tout le scan.
-
-### Gateway
-
-- Aucun protocole ou équipement industriel réel.
-- Etat en mémoire, réinitialisable et déterministe.
-- Mode fixé au démarrage ; aucun endpoint ne change le profil à chaud.
-- Port non publié sur l'hôte par défaut.
-
-## 3. Composants backend
-
-### TargetPolicy
-
-Entrée : enum `ot-gateway-demo`.
-
-Sortie interne : cible canonique `http://ot-gateway-demo:8081` et nom d'affichage `Water Pump Gateway`.
-
-La politique refuse avant réseau toute URL, IP, autre host, port ou schéma. Les scanners ne reçoivent jamais de valeur arbitraire.
-
-### SafeScannerClient
-
-Le comportement commun de `BaseScanner` devient une enveloppe sûre :
-
-- budget atomique partagé ;
-- session sans redirects ;
-- timeouts séparés ;
-- lecture streaming plafonnée ;
-- compteur exact ;
-- redaction récursive ;
-- extrait de réponse limité ;
-- arrêt du moteur sur latence ou réseau anormal.
-
-### Orchestrateur
-
-La route reste async mais appelle le workflow synchrone dans `run_in_threadpool`.
-
-Ordre :
-
-1. validation utilisateur, cible, confirmation et sélection ;
-2. création du Scan `running` ;
-3. reset de la gateway ;
-4. auth ;
-5. BOLA ;
-6. SQLi ;
-7. rate limit classique ;
-8. autorisation OT ;
-9. audit OT ;
-10. rate limit OT ;
-11. calcul score/compteurs ;
-12. finalisation `completed`, `partial` ou `failed`.
-
-Chaque résultat est persisté dès qu'il est produit. Une exception d'un moteur devient un résultat `error` et ne supprime pas les résultats précédents.
-
-## 4. Gateway OT
-
-### Etat initial
+## Logical flow
 
 ```text
-pump-001  zone A  stopped
-pump-002  zone B  running
-pressure  2.5 bar
-flow      120 L/min
-level     65 %
-emergency_stop false
+Browser -> nginx -> React frontend
+                 -> FastAPI backend -> PostgreSQL
+                                    -> isolated OT demo gateway
 ```
 
-### Rôles hardened
+The development stack contains five containers: `nginx`, `frontend`, `backend`, `db`, and `ot-gateway-demo`. The gateway is reachable only from the internal Docker network; neither nginx nor the host publishes port 8081.
 
-| Rôle | Droits |
-|---|---|
-| Guest | Aucun endpoint métier. |
-| Operator A/B | Télémétrie et lecture de la pompe de sa zone. |
-| Supervisor | Lecture, start/stop et consigne. |
-| Admin | Tous droits, audit et emergency stop confirmé. |
+## Trust boundaries
 
-Le scanner possède des identités de démonstration connues et distinctes pour chaque rôle. Elles ne sont jamais montrées dans les résultats.
+1. The browser authenticates only to the platform backend.
+2. The platform JWT never becomes a gateway credential.
+3. A user submits the symbolic target key `ot-gateway-demo`, never an arbitrary URL.
+4. `TargetPolicy` resolves that key to the fixed internal gateway URL.
+5. `SafeScannerClient` enforces the request budget, timeout, redirect, response-size, and evidence-redaction rules.
+6. Gateway credentials and the reset key remain server-side.
 
-### Routes gateway
+## Assessment sequence
 
-| Méthode | Route | Usage |
-|---|---|---|
-| POST | `/auth/token` | Obtenir un jeton de démonstration. |
-| GET | `/telemetry` | Contrôle d'authentification. |
-| GET | `/pumps/{id}` | BOLA inter-zones. |
-| POST | `/pumps/{id}/start` | Commande OT réversible. |
-| POST | `/pumps/{id}/stop` | Restauration. |
-| PUT | `/process/setpoint` | Commande Supervisor. |
-| POST | `/process/emergency-stop` | Test sans confirmation réelle. |
-| GET | `/audit/events` | Recherche par correlation_id. |
-| GET | `/maintenance/orders?id=` | SQLi simulée. |
-| POST | `/demo/reset` | Etat initial protégé par demo key. |
-| GET | `/health` | Santé et profil courant. |
+1. `POST /api/scans` validates the authorization confirmation and closed target key.
+2. The backend creates a `running` scan record.
+3. A worker thread checks gateway health and executes the seven controls in canonical order.
+4. Every control shares one request budget and returns a normalized `TestResult`.
+5. Results, request count, duration, gateway profile, status, and score are persisted.
+6. The owner retrieves the scan through `GET /api/scans/{id}`.
+7. The React report route `/scans/:id/report` renders the stored data for printing.
 
-## 5. Profils reproductibles
+## Canonical controls
 
-| Contrôle | vulnerable | hardened |
-|---|---|---|
-| Auth | Télémétrie accessible avec identité invalide ou absente selon scénario. | 401/403. |
-| BOLA | Operator A lit pump-002. | 403 hors zone. |
-| SQLi | Payload connu renvoie une erreur SQL simulée/différence stable. | Identifiant strictement validé. |
-| Rate limit auth | Aucun 429 sur 8 essais. | 429 avant ou au 8e essai. |
-| Autorisation OT | Rôles insuffisants exécutent les commandes. | 401/403. |
-| Audit OT | Commande absente ou incomplète dans le journal. | Evénement complet et corrélé. |
-| Rate limit OT | Aucun 429. | 5 commandes/4 s puis 429 + Retry-After. |
+| Order | Control | Domain |
+|---:|---|---|
+| 1 | Authentication enforcement | API |
+| 2 | Object-level authorization | API |
+| 3 | SQL injection handling | API |
+| 4 | Authentication rate limiting | API |
+| 5 | OT command authorization | OT |
+| 6 | OT audit completeness | OT |
+| 7 | OT command rate limiting | OT |
 
-## 6. Contrats API plateforme
+## Reproducible profiles
 
-### Configuration de la cible
+`OT_PROFILE=vulnerable` intentionally exposes teaching weaknesses. `OT_PROFILE=hardened` activates RBAC, zone ownership, audit records, safer query handling, and rate limiting. The gateway state is reset before each scan using an internal key, which keeps demonstrations repeatable.
 
-`GET /api/config/scan`
+## Safety invariants
 
-```json
-{
-  "target": "ot-gateway-demo",
-  "display_name": "Water Pump Gateway",
-  "profile": "vulnerable",
-  "tests": ["auth", "idor", "sqli", "rate_limit", "ot_command_authz", "ot_audit", "ot_rate_limit"]
-}
-```
+- Only `ot-gateway-demo` is accepted as a target.
+- Redirects are disabled and destination policy is checked before every request.
+- The server owns all limits and credentials.
+- The total assessment budget is 60 requests by default.
+- Emergency stop is tested only with the non-confirming request; the scanner never activates it.
+- Stored evidence is bounded and redacted.
+- Scan ownership is checked before returning results.
 
-### Création
+## Error behavior
 
-`POST /api/scans/`
-
-```json
-{
-  "target": "ot-gateway-demo",
-  "tests_to_run": ["auth", "idor", "sqli", "rate_limit", "ot_command_authz", "ot_audit", "ot_rate_limit"],
-  "authorization_confirmed": true
-}
-```
-
-Le serveur ignore toute notion d'URL ou de token fournie par un client et renvoie 422 si la cible ou la confirmation est invalide.
-
-### Résultat unitaire
-
-```json
-{
-  "test_name": "ot_command_authz",
-  "status": "vulnerable",
-  "severity": "high",
-  "title": "Commande pompe accessible au rôle Operator",
-  "method": "POST",
-  "endpoint": "/pumps/pump-001/start",
-  "details": "Le rôle Operator a obtenu une réponse 2xx.",
-  "ot_impact": "Modification non autorisée du procédé simulé.",
-  "evidence_json": {"status_code": 200, "correlation_id": "redacted-safe-value"},
-  "recommendations_json": ["Appliquer le RBAC côté serveur."]
-}
-```
-
-## 7. Rapport
-
-Le rapport est rendu par le backend depuis un template HTML, avec un bouton d'impression navigateur. Il ne contient que des objets déjà expurgés. Sections :
-
-1. synthèse et avertissement ;
-2. cible, profil, date, durée et budget ;
-3. score et compteurs ;
-4. constats triés ;
-5. erreurs ;
-6. limites ;
-7. mention que le score n'est ni certification ni mesure exhaustive.
-
-## 8. Gestion des erreurs
-
-- Gateway indisponible avant scan : Scan `failed`, résultat de diagnostic explicite, zéro faux `safe`.
-- Erreur après certains moteurs : Scan `partial`, résultats précédents conservés.
-- Budget épuisé : moteur courant `error`, aucun appel supplémentaire.
-- Reset impossible : scan non lancé ou `failed` avant les sept contrôles.
-- Profil inattendu : rejet de configuration, jamais de supposition côté UI.
+The orchestrator isolates control failures. A failed control produces an `error` result and later controls may continue while budget remains. Final status is `completed`, `partial`, or `failed`; errors are counted but do not reduce the security score.
